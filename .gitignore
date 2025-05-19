@@ -24,3 +24,4 @@ dxf-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+.lexical
