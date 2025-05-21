@@ -3,6 +3,6 @@ defmodule DxfTest do
   doctest Dxf
 
   test "greets the world" do
-    assert Dxf.hello() == :world
+    assert %Dxf{} = Dxf.parse_file("../../data/project_part.dxf")
   end
 end

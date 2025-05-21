@@ -2,6 +2,7 @@ defmodule Dxf.Section.Header do
   @moduledoc """
   Header section of a DXF file.
   """
+  require Dxf.Type
 
   @type t() :: %{}
 
@@ -15,7 +16,7 @@ defmodule Dxf.Section.Header do
   end
 
   def parse([@variable, name | rest], acc) do
-    {value, rest} = parse_value(rest, [])
+    {value, rest} = Dxf.Type.parse(rest) |> IO.inspect(limit: 100, printable_limit: :infinity)
     new_acc = put_in(acc.header[name], value)
     parse(rest, new_acc)
   end

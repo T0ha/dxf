@@ -5,9 +5,16 @@ defmodule Dxf.Type.String do
 
   use Dxf.Type.Behaviour,
     tags: [
-      [1, 3, 4, 
+      [1, 
+        2, # Name
+        3, 4, 
+        5, # Entity handle, Hex 
+        6, # Line type
+        7, # text style name
+        8, #Layer name
         100, 102], 
-      300..309
+      300..309,
+      340..349
     ]
 
   @doc """

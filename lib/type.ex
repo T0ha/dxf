@@ -33,7 +33,7 @@ defmodule Dxf.Type do
     Dxf.Type.Point,
     Dxf.Type.String,
     Dxf.Type.Float,
-    Dxf.Type.Int
+    Dxf.Type.Int,
   ]
 
   # FIXME: this should generate list above automatically but it doesn't work
@@ -71,6 +71,6 @@ defmodule Dxf.Type do
 
       case hd(unquote(data)), do:
         unquote(implementations)
-    end |> IO.inspect()
+    end |> IO.inspect(limit: :infinity, printable_limit: :infinity)
   end
 end

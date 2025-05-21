@@ -31,4 +31,9 @@ defmodule Dxf.Type.Point do
     point = %__MODULE__{x: String.to_float(x), y: String.to_float(y), z: String.to_float(z)}
     {point, rest}
   end
+
+  def parse([@x, x, @y, y | rest]) do
+    point = %__MODULE__{x: String.to_float(x), y: String.to_float(y), z: nil}
+    {point, rest}
+  end
 end

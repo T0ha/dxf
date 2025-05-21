@@ -6,10 +6,14 @@ defmodule Dxf.Type.Int do
 
   use Dxf.Type.Behaviour,
     tags: [
+        [
+        62, # color
+      ],
       70..78,
       90..99,
       160..169,
       170..179,
+      270..289,
       770..289,
     ]
 
