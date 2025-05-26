@@ -8,9 +8,10 @@ defmodule Dxf.Type do
 
 
 
-    defmacro __using__(tags: tags) do
+    defmacro __using__(opts) do
       tags =
-        tags
+        opts
+        |> Keyword.get(:tags, [])
         |> Code.eval_quoted()
         |> elem(0)
         |> Stream.concat()
@@ -34,6 +35,7 @@ defmodule Dxf.Type do
     Dxf.Type.String,
     Dxf.Type.Float,
     Dxf.Type.Int,
+    Dxf.Type.Entity
   ]
 
   # FIXME: this should generate list above automatically but it doesn't work
@@ -68,6 +70,7 @@ defmodule Dxf.Type do
       require Dxf.Type.String
       require Dxf.Type.Float
       require Dxf.Type.Point
+      require Dxf.Type.Entity
 
       case hd(unquote(data)), do:
         unquote(implementations)
