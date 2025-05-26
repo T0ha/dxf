@@ -18,6 +18,7 @@ defmodule Dxf.Type.Entity do
     layer: String.t() | nil,
     color: integer() | nil,
     linetype: String.t() | nil,
+    linetype_scale: float(),
     lineweight: integer() | nil,
     properties: map(),
     entity: struct() | nil
@@ -31,6 +32,7 @@ defmodule Dxf.Type.Entity do
     layer: nil,
     color: nil,
     linetype: nil,
+    linetype_scale: 1.0,
     lineweight: nil,
     properties: %{},
     entity: nil
@@ -43,6 +45,7 @@ defmodule Dxf.Type.Entity do
   @layer "8"
   @color "62"
   @linetype "6"
+  @linetype_scale "48"
   @lineweight "370"
 
   @impl true
@@ -77,6 +80,9 @@ defmodule Dxf.Type.Entity do
   end 
   defp parse_entity([@linetype, linetype | rest], acc) do
     parse_entity(rest, %{acc | linetype: linetype})
+  end
+  defp parse_entity([@linetype_scale,linetype_scale | rest], acc) do
+    parse_entity(rest, %{acc | linetype_scale: linetype_scale})
   end
   defp parse_entity([@lineweight, lineweight | rest], acc) do
     parse_entity(rest, %{acc | lineweight: String.to_integer(lineweight)})
