@@ -8,7 +8,87 @@ defmodule Dxf.Type.Entity do
       [0]
     ]
 
-  @callback parse([String.t()], struct()) :: {struct(), [String.t()]}
+  @callback parse([String.t()]) :: {struct(), [String.t()]}
+
+  defmacro __using__(_opts) do
+    quote do
+      import Dxf.Type.Entity
+      alias Dxf.Type.{Float, Int, Point, String}
+
+      @behaviour Dxf.Type.Entity
+
+      Module.register_attribute(__MODULE__, :tags, accumulate: true)
+    end
+  end
+
+  defmacro entity(type, do: do_block) do
+    prelude =
+      quote do
+        unquote(do_block)
+        def inspect do
+          @tags
+        end
+      end
+
+    postlude =
+      quote unquote: false do
+        defstruct Enum.map(@tags, fn %{key: key, default: default} -> {key, default} end)
+
+        def parse(data), do: parse(data, %__MODULE__{})
+
+        @impl true
+        for %{
+          key: key,
+          tag: tag,
+          module: module,
+          multiple: multiple
+        } <- @tags do
+          if multiple do
+            defp parse([unquote(tag) | _] = data, acc) do
+              {entity, rest} = unquote(module).parse(data)
+              parse(rest, Map.update(acc, unquote(key), [entity], fn values ->
+                [entity | values] end)) |> IO.inspect(label: "Parsing #{__MODULE__}")
+            end
+          else 
+            defp parse([unquote(tag) | _] = data, acc) do
+              {entity, rest} = unquote(module).parse(data)
+              parse(rest, Map.put(acc, unquote(key), entity)) |> IO.inspect()
+            end
+          end
+        end
+        defp parse(rest, acc), do: {acc, rest}
+        
+
+      end
+    quote do
+      unquote(prelude)
+      unquote(postlude)
+    end
+  end
+
+  defmacro tag(key, tag, prser_module, default \\ nil, multiple \\ false) do
+    quote do
+      # tags = Module.get_attribute(__MODULE__, :tags, [])
+
+      # is_duplicated? = Enum.any?(tags,
+      #   fn {key, tag, _, _} -> 
+      #     key == unquote(key)
+      #       or MapSet.dosjoint?(MapSet.new(unquote(tag)), MapSet.new(tags)) 
+      # end)
+
+      # if is_duplicated? do
+      #   raise ArgumentError, "Duplicated key #{key} or tags #{inspect tags}"
+      # end
+
+      Module.put_attribute(__MODULE__, :tags, %{
+        key: unquote(key),
+        tag: unquote(tag),
+        module: unquote(prser_module),
+        default: unquote(default),
+        multiple: unquote(multiple)
+      })
+    end
+  end
 
   @type t :: %__MODULE__{
     type: String.t(),
@@ -57,8 +137,7 @@ defmodule Dxf.Type.Entity do
 
     parse_entity(rest,
       %__MODULE__{
-      type: type,
-      entity: struct(type)
+      type: type
       })
   end
 
@@ -87,8 +166,8 @@ defmodule Dxf.Type.Entity do
   defp parse_entity([@lineweight, lineweight | rest], acc) do
     parse_entity(rest, %{acc | lineweight: String.to_integer(lineweight)})
   end
-  defp parse_entity(rest, %__MODULE__{type: type, entity: entity} = acc) do
-    {entity, rest} =  type.parse(rest, entity)
+  defp parse_entity(rest, %__MODULE__{type: type} = acc) do
+    {entity, rest} =  type.parse(rest)
     parse_entity(rest, %{acc | entity: entity})
   end
 end
