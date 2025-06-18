@@ -3,7 +3,7 @@ defmodule Dxf.Type.Entity do
   Represents a DXF entity.
   """
 
-    use Dxf.Type.Behaviour,
+  use Dxf.Type.Behaviour,
     tags: [
       [0]
     ]
@@ -18,6 +18,15 @@ defmodule Dxf.Type.Entity do
       @behaviour Dxf.Type.Entity
 
       Module.register_attribute(__MODULE__, :tags, accumulate: true)
+      tag(:handle, "5", String, "")
+      tag(:class, "100", String, "")
+      tag(:block, "330", String, "")
+      tag(:layer, "8", String, "")
+      tag(:color, "62", Int, nil)
+      tag(:linetype, "6", String, nil)
+      tag(:linetype_scale, "48", Float, 1.0)
+      tag(:lineweight, "370", Int, nil)
+      tag(:space, "67", Int, 0)
     end
   end
 
@@ -25,149 +34,145 @@ defmodule Dxf.Type.Entity do
     prelude =
       quote do
         unquote(do_block)
+
         def inspect do
           @tags
         end
       end
 
     postlude =
-      quote unquote: false do
+      quote unquote: false, location: :keep do
         defstruct Enum.map(@tags, fn %{key: key, default: default} -> {key, default} end)
 
+        @impl true
         def parse(data), do: parse(data, %__MODULE__{})
 
-        @impl true
         for %{
-          key: key,
-          tag: tag,
-          module: module,
-          multiple: multiple
-        } <- @tags do
-          if multiple do
-            defp parse([unquote(tag) | _] = data, acc) do
-              {entity, rest} = unquote(module).parse(data)
-              parse(rest, Map.update(acc, unquote(key), [entity], fn values ->
-                [entity | values] end)) |> IO.inspect(label: "Parsing #{__MODULE__}")
-            end
-          else 
-            defp parse([unquote(tag) | _] = data, acc) do
-              {entity, rest} = unquote(module).parse(data)
-              parse(rest, Map.put(acc, unquote(key), entity)) |> IO.inspect()
-            end
+              key: key,
+              tag: tag,
+              module: module,
+              default: default,
+              multiple: multiple,
+              duplicated: duplicated,
+              if: where
+            } <- Enum.reverse(@tags) do
+          case duplicated do
+            _ when multiple ->
+              defp parse(
+                     [unquote(tag) | _] = data,
+                     var!(acc)
+                   )
+                   when unquote(where) do
+                {entity, rest} = unquote(module).parse(data)
+
+                parse(
+                  rest,
+                  Map.update(var!(acc), unquote(key), [entity], fn values ->
+                    # |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(tag)}")
+                    [entity | values]
+                  end)
+                )
+              end
+
+            _ ->
+              defp parse([unquote(tag) | _] = data, var!(acc)) when unquote(where) do
+                {entity, rest} = unquote(module).parse(data)
+
+                parse(rest, Map.put(var!(acc), unquote(key), entity))
+                |> IO.inspect(label: "Parsing #{unquote(key)}")
+              end
+
+              # _ when multiple ->
+              #   guard_ast =
+              #     duplicated
+              #     |> Enum.reduce(quote do end, fn %{key: key, default: default}, guard ->
+              #       quote unquote: true do
+              #         acc.unquote(key) != unquote(Macro.escape(default)) or unquote(guard)
+              #       end
+              #     end)
+              #     |> IO.inspect(label: "Guard")
+
+              #   defp parse([unquote(tag) | _] = data, acc) when unquote(guard_ast)  do
+              #     {entity, rest} = unquote(module).parse(data)
+              #     parse(rest, Map.update(acc, unquote(key), [entity], fn values ->
+              #       [entity | values] end)) |> IO.inspect(label: "Parsing #{__MODULE__}")
+              #   end
+              # _ ->
+              #   guard_ast =
+              #     duplicated
+              #     |> Enum.reduce(quote do end, fn %{key: key, default: default}, guard ->
+              #       quote unquote: true do
+              #         acc.unquote(key) != unquote(Macro.escape(default)) or unquote(guard)
+              #       end
+              #     end)
+              #     |> IO.inspect(label: "Guard")
+
+              #   defp parse([unquote(tag) | _] = data, acc) when unquote(guard_ast) do
+              #     {entity, rest} = unquote(module).parse(data)
+              #     parse(rest, Map.put(acc, unquote(key), entity)) |> IO.inspect()
+              #   end
           end
         end
-        defp parse(rest, acc), do: {acc, rest}
-        
 
+        defp parse(rest, acc), do: {acc, rest}
       end
+
     quote do
       unquote(prelude)
       unquote(postlude)
     end
   end
 
-  defmacro tag(key, tag, prser_module, default \\ nil, multiple \\ false) do
+  defmacro tag(key, tag, module, default \\ nil, opts \\ []) do
+    multiple = Keyword.get(opts, :multiple, false)
+    if_ = Keyword.get(opts, :if, true) |> Macro.escape()
+
     quote do
-      # tags = Module.get_attribute(__MODULE__, :tags, [])
+      tags = Module.get_attribute(__MODULE__, :tags, [])
 
-      # is_duplicated? = Enum.any?(tags,
-      #   fn {key, tag, _, _} -> 
-      #     key == unquote(key)
-      #       or MapSet.dosjoint?(MapSet.new(unquote(tag)), MapSet.new(tags)) 
-      # end)
+      is_duplicated_key? =
+        Enum.any?(
+          tags,
+          fn %{key: k} ->
+            k == unquote(key)
+          end
+        )
 
-      # if is_duplicated? do
-      #   raise ArgumentError, "Duplicated key #{key} or tags #{inspect tags}"
-      # end
+      if is_duplicated_key? do
+        raise ArgumentError, "Duplicated key #{unquote(key)}"
+      end
+
+      duplicated_tags =
+        tags
+        |> Enum.filter(&(&1.tag == unquote(tag)))
 
       Module.put_attribute(__MODULE__, :tags, %{
         key: unquote(key),
         tag: unquote(tag),
-        module: unquote(prser_module),
+        module: unquote(module),
         default: unquote(default),
-        multiple: unquote(multiple)
+        multiple: unquote(multiple),
+        duplicated: duplicated_tags,
+        if: unquote(if_)
       })
     end
   end
 
-  @type t :: %__MODULE__{
-    type: String.t(),
-    handle: String.t() | nil,
-    class: String.t() | nil,
-    block: String.t() | nil,
-    layer: String.t() | nil,
-    color: integer() | nil,
-    linetype: String.t() | nil,
-    linetype_scale: float(),
-    lineweight: integer() | nil,
-    properties: map(),
-    entity: struct() | nil
-  }
-
-  defstruct [
-    type: "",
-    handle: nil,
-    class: nil,
-    block: nil,
-    layer: nil,
-    color: nil,
-    linetype: nil,
-    linetype_scale: 1.0,
-    lineweight: nil,
-    properties: %{},
-    entity: nil
-  ]
+  defmacro guard(expr) do
+    quote do
+      unquote(Macro.escape(expr))
+    end
+  end
 
   @entity "0"
-  @handle "5"
-  @class "100"
-  @block "330"
-  @layer "8"
-  @color "62"
-  @linetype "6"
-  @linetype_scale "48"
-  @lineweight "370"
 
   @impl true
   def parse([@entity, type | rest]) do
-    type = 
+    type =
       type
       |> String.capitalize()
       |> then(&Module.concat([__MODULE__, &1]))
 
-    parse_entity(rest,
-      %__MODULE__{
-      type: type
-      })
-  end
-
-  defp parse_entity([@entity | _] = rest, acc), do: {acc, rest}
-  defp parse_entity([@handle, handle | rest], acc) do
-     parse_entity(rest, %{acc | handle: handle})
-  end
-  defp parse_entity([@class, class | rest], acc) do
-    parse_entity(rest, %{acc | class: class})
-  end
-  defp parse_entity([@block, block | rest], acc) do
-    parse_entity(rest, %{acc | block: block})
-  end
-  defp parse_entity([@layer, layer | rest], acc) do
-    parse_entity(rest, %{acc | layer: layer})
-  end
-  defp parse_entity([@color, color | rest], acc) do
-    parse_entity(rest, %{acc | color: String.to_integer(color)})
-  end 
-  defp parse_entity([@linetype, linetype | rest], acc) do
-    parse_entity(rest, %{acc | linetype: linetype})
-  end
-  defp parse_entity([@linetype_scale,linetype_scale | rest], acc) do
-    parse_entity(rest, %{acc | linetype_scale: linetype_scale})
-  end
-  defp parse_entity([@lineweight, lineweight | rest], acc) do
-    parse_entity(rest, %{acc | lineweight: String.to_integer(lineweight)})
-  end
-  defp parse_entity(rest, %__MODULE__{type: type} = acc) do
-    {entity, rest} =  type.parse(rest)
-    parse_entity(rest, %{acc | entity: entity})
+    type.parse(rest)
   end
 end
