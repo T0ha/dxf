@@ -6,7 +6,7 @@ defmodule Dxf do
 
   @type t() :: %__MODULE__{
           header: list(),
-    classes: list(),
+          classes: list(),
           tables: map(),
           blocks: map(),
           entities: map(),
@@ -25,7 +25,6 @@ defmodule Dxf do
   @entity_type "0"
   @name "2"
 
-
   @doc """
   Parses a DXF file and returns a map of sections.
   """
@@ -35,7 +34,6 @@ defmodule Dxf do
     |> parse()
   end
 
-  
   def parse(data) do
     data
     |> String.split("\r\n", trim: false)
@@ -51,23 +49,27 @@ defmodule Dxf do
     parse_type(type, name, rest, acc)
   end
 
-  #defp parse_tagged([@name, name | rest], acc, nil) do
+  # defp parse_tagged([@name, name | rest], acc, nil) do
   #  parse_entity(type, name, rest, acc)
-  #end
+  # end
 
-def parse_tagged([@entity_type, "EOF" | _rest], acc) do
+  def parse_tagged([@entity_type, "EOF" | _rest], acc) do
     acc
   end
 
   defp parse_type(_, type, rest, acc) do
     case type do
-      "HEADER" -> Header.parse(rest, acc) 
-      #"CLASSES" -> Stub.parse(rest, acc)
-      #"TABLES" -> Stub.parse(rest, acc)
-      #"BLOCKS" -> Stub.parse(rest, acc)
-      "ENTITIES" -> Entities.parse(rest, acc)
-      #"OBJECTS" -> Stub.parse(rest, acc)
-      section -> 
+      "HEADER" ->
+        Header.parse(rest, acc)
+
+      # "CLASSES" -> Stub.parse(rest, acc)
+      # "TABLES" -> Stub.parse(rest, acc)
+      # "BLOCKS" -> Stub.parse(rest, acc)
+      "ENTITIES" ->
+        Entities.parse(rest, acc)
+
+      # "OBJECTS" -> Stub.parse(rest, acc)
+      section ->
         IO.inspect("Unknown section : #{section}")
         Stub.parse(rest, acc)
     end

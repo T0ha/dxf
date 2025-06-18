@@ -6,7 +6,8 @@ defmodule Dxf.Type.Float do
   use Dxf.Type.Behaviour,
     tags: [
       40..48,
-      50..58, # Angles
+      # Angles
+      50..58,
       140..149
     ]
 

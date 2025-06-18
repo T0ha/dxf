@@ -3,20 +3,19 @@ defmodule Dxf.Type.Int do
   A module for handling points in DXF files.
   """
 
-
   use Dxf.Type.Behaviour,
     tags: [
-        [
-        62, # color
+      [
+        # color
+        62
       ],
       70..78,
       90..99,
       160..169,
       170..179,
       270..289,
-      770..289,
+      770..289
     ]
-
 
   @doc """
   Parses a point from a list of strings.
