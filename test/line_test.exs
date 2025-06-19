@@ -38,17 +38,15 @@ defmodule Dxf.Type.Entity.LineTest do
         |> String.split("\n", trim: false)
         |> Enum.map(&String.trim/1)
         |> Entity.parse()
-        |> IO.inspect(label: "Parsed Entity")
 
       assert entity.__struct__ == Line
       assert entity.start_point == %Point{x: 0.0, y: -1.5, z: 0.0}
       assert entity.end_point == %Point{x: 0.0, y: 1.5, z: 0.0}
       assert entity.handle == "4E"
       assert entity.block == "4C"
-
-      # Defaults
-      assert entity.thickness == 0.0
-
+      assert entity.class == "AcDbLine"
+      assert entity.layer == "0"
+      assert entity.color == 0
     end
   end
 end

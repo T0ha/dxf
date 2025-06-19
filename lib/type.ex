@@ -6,8 +6,6 @@ defmodule Dxf.Type do
   defmodule Behaviour do
     @callback parse([String.t()]) :: {any(), [String.t()]}
 
-
-
     defmacro __using__(opts) do
       tags =
         opts
@@ -23,7 +21,7 @@ defmodule Dxf.Type do
 
         @tags tags
 
-        defguard is_parsable?(data) when hd(data) in @tags 
+        defguard is_parsable?(data) when hd(data) in @tags
 
         defoverridable is_parsable?: 1
       end
@@ -41,9 +39,11 @@ defmodule Dxf.Type do
   # FIXME: this should generate list above automatically but it doesn't work
   #  Module.get_attribute(Types, :types)
   #  |> Enum.map(&(elem(&1, 0)))
-  #  |> Enum.filter(&(String.contains?("#{&1}", "Dxf")))
-  #  |> Enum.map(&String.to_atom("#{&1}"))
-  #  |> IO.inspect()
+  # :dxf
+  # |> :application.get_key(:modules)
+  #   |> IO.inspect()
+  #   |> Enum.filter(&(String.contains?("#{&1}", "Dxf")))
+  #   |> Enum.map(&String.to_atom("#{&1}"))
   #  |> Enum.filter(fn m ->
   #    m.__info__(:attributes)[:behaviour] == [__MODULE__]
   #  end)
@@ -53,15 +53,15 @@ defmodule Dxf.Type do
   """
   @spec parse([String.t()]) :: {any(), [String.t()]}
   defmacro parse(data) do
-    implementations = 
+    implementations =
       @modules
       |> Enum.map(fn m ->
-
         [c] =
-        quote do
-          _tag when unquote(m).is_parsable?(unquote(data)) ->
+          quote do
+            _tag when unquote(m).is_parsable?(unquote(data)) ->
               unquote(m).parse(unquote(data))
-        end
+          end
+
         c
       end)
 
@@ -72,8 +72,9 @@ defmodule Dxf.Type do
       require Dxf.Type.Point
       require Dxf.Type.Entity
 
-      case hd(unquote(data)), do:
-        unquote(implementations)
-    end |> IO.inspect(limit: :infinity, printable_limit: :infinity)
+      case hd(unquote(data)), do: unquote(implementations)
+    end
+
+    # |> IO.inspect(limit: :infinity, printable_limit: :infinity)
   end
 end
