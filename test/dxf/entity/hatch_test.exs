@@ -146,6 +146,6 @@ defmodule Dxf.Type.Entity.HatchTest do
     assert hatch.hatch_style == 1
     assert hatch.hatch_pattern_type == 1
     assert hatch.pattern_angle == 0.0
-    assert hatch.pattern_scale == 0.0700968387308667
+    assert hatch.pixel_size == 0.0700968387308667
   end
 end
