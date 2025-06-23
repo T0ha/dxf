@@ -20,6 +20,7 @@ defmodule Dxf.Type.Entity.Lwpolyline do
   end
 
   entity "LWPOLYLINE" do
+    tag(:polyline_class, "100", String, "AcDbPolyline")
     tag(:n, "90", Int, 0)
     tag(:polyline_flag, "70", Int, 0)
     tag(:constant_width, "43", Float, 0.0)

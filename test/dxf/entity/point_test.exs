@@ -2,11 +2,9 @@ defmodule Dxf.Type.Entity.PointTest do
   use Dxf.EntityCase, async: true
   alias Dxf.Type.Point
 
-  @data 
-
   describe "Point entity" do
     test_entity Dxf.Type.Entity.Point,
-      ~S(0
+                ~S(0
       POINT
       5
       4181B
@@ -26,7 +24,6 @@ defmodule Dxf.Type.Entity.PointTest do
       5236.689999999999
       30
       153.513) do
-
       assert entity.start_point == %Point{x: 0.0, y: -1.5, z: 0.0}
       assert entity.end_point == %Point{x: 0.0, y: 1.5, z: 0.0}
       assert entity.handle == "4E"

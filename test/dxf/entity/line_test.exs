@@ -1,11 +1,9 @@
 defmodule Dxf.Type.Entity.LineTest do
   use Dxf.EntityCase
-  
-
 
   describe "Line entity" do
     test_entity Dxf.Type.Entity.Line,
-      ~S(0
+                ~S(0
       LINE
       5
       4E
@@ -30,8 +28,7 @@ defmodule Dxf.Type.Entity.LineTest do
       21
       1.5
       31
-      0.0)
-    do
+      0.0) do
       assert entity.start_point == %Point{x: 0.0, y: -1.5, z: 0.0}
       assert entity.end_point == %Point{x: 0.0, y: 1.5, z: 0.0}
       assert entity.handle == "4E"
