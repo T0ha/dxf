@@ -10,7 +10,9 @@ defmodule Dxf.Type.Entity do
 
   @callback parse([String.t()]) :: {struct(), [String.t()]}
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
+    embedded = Keyword.get(opts, :embedded, false)
+
     quote do
       import Dxf.Type.Entity
       alias Dxf.Type.{Float, Int, Point, String}
@@ -18,15 +20,19 @@ defmodule Dxf.Type.Entity do
       @behaviour Dxf.Type.Entity
 
       Module.register_attribute(__MODULE__, :tags, accumulate: true)
-      tag(:handle, "5", String, "")
-      tag(:class, "100", String, "")
-      tag(:block, "330", String, "")
-      tag(:layer, "8", String, "")
-      tag(:color, "62", Int, nil)
-      tag(:linetype, "6", String, nil)
-      tag(:linetype_scale, "48", Float, 1.0)
-      tag(:lineweight, "370", Int, nil)
-      tag(:space, "67", Int, 0)
+
+      unless unquote(embedded) do
+        tag(:handle, "5", String, "")
+        tag(:class, "100", String, "AcDbEntity")
+        tag(:block, "330", String, "")
+        tag(:layer, "8", String, "")
+        tag(:color, "62", Int, nil)
+        tag(:linetype, "6", String, nil)
+        tag(:linetype_scale, "48", Float, 1.0)
+        tag(:lineweight, "370", Int, nil)
+        tag(:default_color, "420", Int, 256)
+        tag(:space, "67", Int, 0)
+      end
     end
   end
 
@@ -42,7 +48,9 @@ defmodule Dxf.Type.Entity do
 
     postlude =
       quote unquote: false, location: :keep do
-        defstruct Enum.map(@tags, fn %{key: key, default: default} -> {key, default} end)
+        defstruct Enum.uniq(
+                    Enum.map(@tags, fn %{key: key, default: default} -> {key, default} end)
+                  )
 
         @impl true
         def parse(data), do: parse(data, %__MODULE__{})
@@ -68,52 +76,36 @@ defmodule Dxf.Type.Entity do
                 parse(
                   rest,
                   Map.update(var!(acc), unquote(key), [entity], fn values ->
-                    # |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(tag)}")
                     [entity | values]
                   end)
+                  # |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(key)}")
                 )
               end
 
-            _ ->
+            true ->
               defp parse([unquote(tag) | _] = data, var!(acc)) when unquote(where) do
                 {entity, rest} = unquote(module).parse(data)
 
                 parse(rest, Map.put(var!(acc), unquote(key), entity))
-                |> IO.inspect(label: "Parsing #{unquote(key)}")
+                # |> IO.inspect(label: "Parsing #{unquote(key)}")
               end
 
-              # _ when multiple ->
-              #   guard_ast =
-              #     duplicated
-              #     |> Enum.reduce(quote do end, fn %{key: key, default: default}, guard ->
-              #       quote unquote: true do
-              #         acc.unquote(key) != unquote(Macro.escape(default)) or unquote(guard)
-              #       end
-              #     end)
-              #     |> IO.inspect(label: "Guard")
+            _ ->
+              defp parse(
+                     [unquote(tag) | _] = data,
+                     %__MODULE__{unquote(key) => unquote(default |> Macro.escape())} = var!(acc)
+                   )
+                   when unquote(where) do
+                {entity, rest} = unquote(module).parse(data)
 
-              #   defp parse([unquote(tag) | _] = data, acc) when unquote(guard_ast)  do
-              #     {entity, rest} = unquote(module).parse(data)
-              #     parse(rest, Map.update(acc, unquote(key), [entity], fn values ->
-              #       [entity | values] end)) |> IO.inspect(label: "Parsing #{__MODULE__}")
-              #   end
-              # _ ->
-              #   guard_ast =
-              #     duplicated
-              #     |> Enum.reduce(quote do end, fn %{key: key, default: default}, guard ->
-              #       quote unquote: true do
-              #         acc.unquote(key) != unquote(Macro.escape(default)) or unquote(guard)
-              #       end
-              #     end)
-              #     |> IO.inspect(label: "Guard")
-
-              #   defp parse([unquote(tag) | _] = data, acc) when unquote(guard_ast) do
-              #     {entity, rest} = unquote(module).parse(data)
-              #     parse(rest, Map.put(acc, unquote(key), entity)) |> IO.inspect()
-              #   end
+                parse(rest, Map.put(var!(acc), unquote(key), entity))
+                # |> IO.inspect(label: "Parsing #{unquote(key)}")
+              end
           end
         end
 
+        # FIXME: Ignore Extended data (1000+ tags) ATM
+        defp parse([<<"1", _, _, _>>, _value | rest], acc), do: parse(rest, acc)
         defp parse(rest, acc), do: {acc, rest}
       end
 
@@ -136,7 +128,7 @@ defmodule Dxf.Type.Entity do
           fn %{key: k} ->
             k == unquote(key)
           end
-        )
+        ) && unquote(if_) == true
 
       if is_duplicated_key? do
         raise ArgumentError, "Duplicated key #{unquote(key)}"
