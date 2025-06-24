@@ -78,7 +78,7 @@ defmodule Dxf.Type.Entity do
                   Map.update(var!(acc), unquote(key), [entity], fn values ->
                     [entity | values]
                   end)
-                  # |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(key)}")
+                   |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(key)}")
                 )
               end
 
@@ -87,7 +87,7 @@ defmodule Dxf.Type.Entity do
                 {entity, rest} = unquote(module).parse(data)
 
                 parse(rest, Map.put(var!(acc), unquote(key), entity))
-                # |> IO.inspect(label: "Parsing #{unquote(key)}")
+                 |> IO.inspect(label: "Parsing #{unquote(key)}")
               end
 
             _ ->
@@ -99,12 +99,18 @@ defmodule Dxf.Type.Entity do
                 {entity, rest} = unquote(module).parse(data)
 
                 parse(rest, Map.put(var!(acc), unquote(key), entity))
-                # |> IO.inspect(label: "Parsing #{unquote(key)}")
+                 |> IO.inspect(label: "Parsing #{unquote(key)}")
               end
           end
         end
 
-        # FIXME: Ignore Extended data (1000+ tags) ATM
+        # TODO: 102 tags between { and } are ignored
+        defp parse(["102", <<"{", app::binary>> | rest], acc) do
+          ["}" | rest] = Enum.drop_while(rest, fn tag -> tag != "}" end)
+          parse(rest, acc)
+        end
+
+        # TODO: Ignore Extended data (1000+ tags) ATM
         defp parse([<<"1", _, _, _>>, _value | rest], acc), do: parse(rest, acc)
         defp parse(rest, acc), do: {acc, rest}
       end
