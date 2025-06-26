@@ -78,7 +78,7 @@ defmodule Dxf.Type.Entity do
                   Map.update(var!(acc), unquote(key), [entity], fn values ->
                     [entity | values]
                   end)
-                   |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(key)}")
+                  |> IO.inspect(label: "Parsing #{__MODULE__} #{unquote(key)}")
                 )
               end
 
@@ -87,7 +87,7 @@ defmodule Dxf.Type.Entity do
                 {entity, rest} = unquote(module).parse(data)
 
                 parse(rest, Map.put(var!(acc), unquote(key), entity))
-                 |> IO.inspect(label: "Parsing #{unquote(key)}")
+                |> IO.inspect(label: "Parsing #{unquote(key)}")
               end
 
             _ ->
@@ -99,7 +99,7 @@ defmodule Dxf.Type.Entity do
                 {entity, rest} = unquote(module).parse(data)
 
                 parse(rest, Map.put(var!(acc), unquote(key), entity))
-                 |> IO.inspect(label: "Parsing #{unquote(key)}")
+                |> IO.inspect(label: "Parsing #{unquote(key)}")
               end
           end
         end
@@ -131,8 +131,10 @@ defmodule Dxf.Type.Entity do
       is_duplicated_key? =
         Enum.any?(
           tags,
-          fn %{key: k} ->
-            k == unquote(key)
+          fn %{key: k, tag: t} ->
+            # class tag
+            k == unquote(key) &&
+              t != "100"
           end
         ) && unquote(if_) == true
 
